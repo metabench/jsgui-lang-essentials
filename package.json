@@ -1,0 +1,25 @@
+{
+  "name": "jsgui-lang-essentials",
+  "version": "0.3.8",
+  "main": "jsgui-lang-essentials.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metabench/jsgui-lang-essentials"
+  },
+  "keywords": [
+    "lang",
+    "jsgui"
+  ],
+  "author": "James Vickers <james@metabench.com>",
+  "description": "jsgui - Small and powerful utility module, used by other jsgui modules.",
+  "contributors": [ 
+    {
+      "name": "James Vickers",
+      "email": "james@metabench.com"
+    } 
+  ],
+  "license": "MIT"
+}
