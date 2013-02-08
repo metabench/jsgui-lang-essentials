@@ -15,6 +15,9 @@
   ],
   "author": "James Vickers <james@metabench.com>",
   "description": "jsgui - Small and powerful utility module, used by other jsgui modules.",
+  "dependencies": {
+    "amdefine": ">=0.0.4"
+  },
   "contributors": [ 
     {
       "name": "James Vickers",

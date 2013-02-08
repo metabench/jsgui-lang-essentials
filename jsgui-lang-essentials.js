@@ -1,6 +1,17 @@
 
-define(function() {
+if (typeof define !== 'function') {
+    var define = require('amdefine')(module);
+}
 
+define(function() {
+	
+	
+
+	// Do setup work here
+	// alert('loading jsgui-lang');
+	// lots of things will be in var declarations....
+	//  
+	// return {};
 	var initializing = false, fnTest = /xyz/.test(function() {
 		xyz;
 	}) ? /\b_super\b/ : /.*/;
@@ -725,7 +736,10 @@ define(function() {
 			fn = a0[0];
 			options = null;
 		}
-		//var that = this;
+		
+		//is there a this?
+		
+		var that = this;
 		//var _super = that._super;
 		
 		// not having access to this here
@@ -763,7 +777,7 @@ define(function() {
 	var arrayify = fp(function(a, sig) {
 
 		// console.log('arrayify sig ' + sig);
-
+        
 		// What about arrayifying a map rather than a function?
 		// Turns it into name/value pairs. Easier to process with each or
 		// measure the length of.
@@ -897,6 +911,8 @@ define(function() {
 				 * res.push(v); }); return res;
 				 */
 				return obj.slice();
+				
+				// deep clone...?
 
 			} else if (t == 'undefined') {
 				return undefined;
@@ -1148,6 +1164,7 @@ define(function() {
 		return is_arr_of_t(obj, 'string');
 	}
 	
+	
 	var input_processors = {};
 	var output_processors = {};
 	
@@ -1164,6 +1181,17 @@ define(function() {
 	//var output_processors = {};
 	
 	// Possibly validators here too.
+	//  They may well get used for data structures that deal with these data types. The typed constraints could make use of them (the basis that is set in essentials)
+	//  while adding to them. Perhaps a 'core' intermediate layer will be there extending essentials with some of the data types that are to be used throughout the system.
+	
+	// May find that the functionality for 'nested' gets moved out from that code file. Not so sure about using the Data_Type_Instance...
+	//  it could be useful, but not really useful on the level of what the user wants the system to do.
+	//  Want to get the Data_Object and Collections system working in some more generic tests, also want to explore some of the more complicated data structures
+	//  that will be used for HTML. The idea is that the HTML section will not need so much code because it is making use of some more generally defined things.
+	
+	// Defining an element's style attributes... will use a Data_Object system internally that is customized to reformat data.
+	//  That seems like a fairly big goal, want to get these things working on a simpler level and in collections.
+	//  Will use some kind of polymorphic rearrangement to rearrange where suitable.
 	
 	var call_multiple_callback_functions = fp(function(a, sig) {
 		
@@ -1236,11 +1264,11 @@ define(function() {
 				}
 				// object / data_object?
 				// ?, function, array
-				if (tof(pair[1]) == 'function' && tof(pair[2]) == 'array') {
-					context = pair[0];
-					fn = pair[1];
-					params = pair[2];
-				}
+				//if (tof(pair[1]) == 'function' && tof(pair[2]) == 'array') {
+				//	context = pair[0];
+				//	fn = pair[1];
+					// params = pair[2];
+				//}
 			}
 			
 			var i = c;
