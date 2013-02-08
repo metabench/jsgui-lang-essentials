@@ -1214,6 +1214,9 @@ define(function() {
 			callback = a[1];
 			return_params = a[2];
 		}
+		
+		// also want the context.
+		
 		var res = [];
 		
 		var l = arr_functions_params_pairs.length;
@@ -1264,11 +1267,21 @@ define(function() {
 				}
 				// object / data_object?
 				// ?, function, array
-				//if (tof(pair[1]) == 'function' && tof(pair[2]) == 'array') {
-				//	context = pair[0];
-				//	fn = pair[1];
-					// params = pair[2];
-				//}
+				if (tof(pair[1]) == 'function' && tof(pair[2]) == 'array') {
+					context = pair[0];
+					fn = pair[1];
+					params = pair[2];
+				}
+			}
+			
+			if (pair.length == 4) {
+			    // context, function being called, params, cb
+			    context = pair[0];
+			    fn = pair[1];
+			    params = pair[2];
+			    fn_callback = pair[3];
+			    
+			    
 			}
 			
 			var i = c;
@@ -1290,6 +1303,9 @@ define(function() {
 					}
 					console.log('pair.length ' + pair.length);
 					if (pair.length == 3) {
+						fn_callback(null, res2);
+					}
+					if (pair.length == 4) {
 						fn_callback(null, res2);
 					}
 					
