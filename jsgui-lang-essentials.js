@@ -1240,7 +1240,7 @@ define(function() {
 			var fn, params, fn_callback;
 			// function, array
 			// context
-			console.log('pair.length ' + pair.length);
+			//console.log('pair.length ' + pair.length);
 			if (pair.length == 2) {
 				//if (tof(pair[0]) == 'function' && tof(pair[1]) == 'array' && pair.length == 2) {
 				//	fn = pair[0];
@@ -1295,13 +1295,13 @@ define(function() {
 					throw err;
 				} else {
 					if (return_params) {
-						console.log('return_params ' + return_params);
-						console.log('params ' + params);
+						//console.log('return_params ' + return_params);
+						//console.log('params ' + params);
 						res[i] = [params, res2];
 					} else {
 						res[i] = res2;
 					}
-					console.log('pair.length ' + pair.length);
+					//console.log('pair.length ' + pair.length);
 					if (pair.length == 3) {
 						fn_callback(null, res2);
 					}
