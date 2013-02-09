@@ -1248,7 +1248,7 @@ define(function() {
 				//}
 				// ?, function
 				
-				if (tof(pair[1] == 'function')) {
+				if (tof(pair[1]) == 'function') {
 					context = pair[0];
 					fn = pair[1];
 					params = [];
