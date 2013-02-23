@@ -130,7 +130,9 @@ define(function() {
 
 	each("Boolean Number String Function Array Date RegExp Object".split(" "),
 		function(i, name) {
-			jq_class2type["[object " + name + "]"] = name.toLowerCase();
+			if (typeof(name) == 'string') {
+		        jq_class2type["[object " + name + "]"] = name.toLowerCase();
+		    }
 		});
 
 	/*
@@ -367,6 +369,7 @@ define(function() {
 			res = 'array';
 		if (res == 'object' && is_ctrl(obj))
 			res = 'control';
+		if (obj instanceof RegExp) res = 'regex';
 		return res;
 	};
 	
@@ -564,7 +567,12 @@ define(function() {
 		return res.join('');
 	};
 
-	var get_item_sig = function(i) {
+	var get_item_sig = function(i, arr_depth) {
+	
+	    // an option about how far into the array to look.
+	    
+	    
+	
 		// also want to be able to do polymorphic rearrangements.
 		// these will need to be specified so they get rearranged as required.
 		// will check for some signatures and rearrange the arguments, and
@@ -584,7 +592,8 @@ define(function() {
 
 		// will get the poly signature for each item in the array?
 		// is it an array?
-
+    
+        
 		
 		
 		var t = tof(i), res;
@@ -600,13 +609,27 @@ define(function() {
 		// likely to use a map for this logic instead.
 		// console.log('t ' + t);
 		if (t == 'array') {
-			var res = '[';
-			for ( var c = 0, l = i.length; c < l; c++) {
-				if (c > 0)
-					res = res + ',';
-				res = res + get_item_sig(i[c]);
-			}
-			res = res + ']';
+		    
+		    // look into it with one nested level...
+		    if (arr_depth) {
+		        var res = '[';
+                for ( var c = 0, l = i.length; c < l; c++) {
+                    if (c > 0)
+                        res = res + ',';
+                    res = res + get_item_sig(i[c], arr_depth - 1);
+                }
+                res = res + ']';
+		        
+		    } else {
+		        res = 'a';
+		    }
+		    
+		    
+		    /*
+			
+			*/
+			
+			
 			// return res;
 		} else if (t == 'string') {
 			// is it a string that parses to an integer?
@@ -624,6 +647,8 @@ define(function() {
 			res = 'f';
 		} else if (t == 'control') {
 			res = 'c';
+		} else if (t == 'regex') {
+			res = 'r';
 		} else if (t == 'number') {
 			// is it an integer?
 			// is it a decimal?
@@ -753,7 +778,7 @@ define(function() {
 			// and if there is an array of arguments given... give as one
 			// argument.
 			if (a.length == 1) {
-				var sig = get_item_sig([ a[0] ]);
+				var sig = get_item_sig([a[0]], 1);
 				//console.log('fp sig, a.l == 1 ' + sig);
 				// a 'l' property given to array given
 				var a2 = [ a[0] ];
@@ -762,7 +787,7 @@ define(function() {
 			} else if (a.length > 1) {
 				var arr = arr_like_to_arr(a);
 				arr = arr_trim_undefined(arr);
-				var sig = get_item_sig(arr);
+				var sig = get_item_sig(arr, 1);
 				arr.l = arr.length;
 				return fn.call(that, arr, sig, _super);
 			} else if (a.length == 0) {
@@ -775,7 +800,18 @@ define(function() {
 	}, fp = functional_polymorphism;
 
 	var arrayify = fp(function(a, sig) {
-
+        // but when the function has it's last parameter as a function...
+        //  can we assume it is a callback?
+        
+        
+        // this could take options, like 'compile_results'
+        //  compile_async_results.
+        
+        // maybe do that automatically, but have a variable to control it.
+        
+        
+        
+    
 		// console.log('arrayify sig ' + sig);
         
 		// What about arrayifying a map rather than a function?
@@ -788,40 +824,111 @@ define(function() {
 		// (param_index, fn)
 		var res;
 		var process_as_fn = function() {
+		    
+		
 			res = function() {
 				// could use pf here? but maybe not
 
 				// console.log('arguments.length ' + arguments.length);
 
 				var a = arr_like_to_arr(arguments), ts = atof(a), t = this;
-
+                
+                var last_arg = a[a.length - 1];
+                //console.log('last_arg ' + last_arg);
+                //console.log('a.length ' + a.length);
+                
+                if (tof(last_arg == 'function')) {
+                    // it seems like a callback function.
+                    
+                    // will do callback result compilation.
+                    
+                    
+                    
+                    if (typeof param_index !== 'undefined' && ts[param_index] == 'array') {
+                        // var res = [], a2 = a.slice(1); // don't think this makes
+                        // a copy of the array.
+                        var res = []; // don't think this makes a copy of the
+                                        // array.
+                        // console.log('fn ' + fn);
+                        
+                        // but we can make this process a function with a callback.
+                        
+                        
+                        var fns = [];
+                        
+                        each(a[param_index], function(i, v) {
+                            var new_params = a.slice(0, a.length - 1);
+                            new_params[param_index] = v;
+                            // the rest of the parameters as normal
+                            
+                            // context, function, params
+                            fns.push([t, fn, new_params]);
+                                
+                            //var result = fn.apply(t, new_params);
+                            // console.log('result ' + stringify(result));
+                            //res.push(result);
+                        });
+                        //return res;
+                        
+                        call_multiple_callback_functions(fns, function(err, res) {
+                            if (err) {
+                                throw err;
+                            } else {
+                                //
+                                var callback = last_arg;
+                                //console.log('last_arg ' + last_arg);
+                                callback(null, res);
+                            }
+                        })
+                        
+                    } else {
+                        return fn.apply(t, a);
+                    }
+                    
+                    
+                } else {
+                    
+                    
+                    
+                    if (typeof param_index !== 'undefined' && ts[param_index] == 'array') {
+                        // var res = [], a2 = a.slice(1); // don't think this makes
+                        // a copy of the array.
+                        var res = []; // don't think this makes a copy of the
+                                        // array.
+                        // console.log('fn ' + fn);
+                        
+                        // but we can make this process a function with a callback.
+                        
+                        
+                        
+                        
+                        each(a[param_index], function(i, v) {
+                            var new_params = a;
+                            new_params[param_index] = v;
+                            // the rest of the parameters as normal
+    
+                            var result = fn.apply(t, new_params);
+                            // console.log('result ' + stringify(result));
+                            res.push(result);
+                        });
+                        return res;
+                    } else {
+                        return fn.apply(t, a);
+                    }
+                    
+                }
+                
+                
 				// console.log('a.length ' + a.length);
 				// console.log('a ' + stringify(a));
 
 				// console.log('param_index ' + param_index);
 				// console.log('ts ' + stringify(ts));
-
-				if (typeof param_index !== 'undefined'
-						&& ts[param_index] == 'array') {
-					// var res = [], a2 = a.slice(1); // don't think this makes
-					// a copy of the array.
-					var res = []; // don't think this makes a copy of the
-									// array.
-					// console.log('fn ' + fn);
-
-					each(a[param_index], function(i, v) {
-						var new_params = a;
-						new_params[param_index] = v;
-						// the rest of the parameters as normal
-
-						var result = fn.apply(t, new_params);
-						// console.log('result ' + stringify(result));
-						res.push(result);
-					});
-					return res;
-				} else {
-					return fn.apply(t, a);
-				}
+                
+                // but if the last function there is a function... it may be best to compile the results into one object.
+                
+                
+                
 			};
 		}
 
@@ -1201,18 +1308,47 @@ define(function() {
 		
 		// need to be checking if the item is an array - nice to have a different way of doing that with fp.
 		
+		// and want to look out for a number in there.
+		//  want it to call multiple functions, but have them running in parallel too.
+		//  like the async library, but also accepting parameters.
+		
 		
 		// arr_functions_params_pairs, callback
 		var arr_functions_params_pairs, callback, return_params = false;
+		//console.log('a.l ' + a.l);
+		
+		var num_parallel = 1;
+		
 		
 		if (a.l == 2) {
 			arr_functions_params_pairs = a[0];
 			callback = a[1];
 		}
 		if (a.l == 3) {
-			arr_functions_params_pairs = a[0];
-			callback = a[1];
-			return_params = a[2];
+		    // look at the sig
+		    // arr, num, fn - number is the number of parallel to do at once.
+		    // return_params is a boolean?
+		    
+		    // want a signature that just treats an array as a?
+		    //  may make more sense for these function signatures.
+		    //   at least for the first stage... could look in more detail at the array.
+		    //   not using the more complicated signatures right now. could change to a different sig method when needed, or use different sig or fp options.
+		    
+		    
+		    //console.log('sig ' + sig);
+		    
+		    if (sig == '[a,n,f]') {
+		        arr_functions_params_pairs = a[0];
+		        num_parallel = a[1];
+		        callback = a[2];
+		    }
+		    if (sig == '[a,f,b]') {
+		        arr_functions_params_pairs = a[0];
+                callback = a[1];
+                return_params = a[2];
+		    }
+		    
+			
 		}
 		
 		// also want the context.
@@ -1226,9 +1362,14 @@ define(function() {
 		// the number of processes going 
 		
 		// the maximum number of processes allowed.
-
+        //  num_parallel
+        
+        var num_currently_executing = 0;
+        
 		var process = function() {
+		    num_currently_executing++;
 			// they may not be pairs, they could be a triple with a callback.
+			//console.log('num_currently_executing ' + num_currently_executing);
 			
 			
 			var pair = arr_functions_params_pairs[c];
@@ -1260,6 +1401,8 @@ define(function() {
 			
 			// function, array, function
 			if (pair.length == 3) {
+			    var pair_sig = get_item_sig(pair);
+			    //console.log('pair_sig ' + pair_sig);
 				if (tof(pair[0]) == 'function' && tof(pair[1]) == 'array' && tof(pair[2]) == 'function') {
 					fn = pair[0];
 					params = pair[1];
@@ -1271,6 +1414,9 @@ define(function() {
 					context = pair[0];
 					fn = pair[1];
 					params = pair[2];
+					
+					// may not be a fn_callback in this case.
+					
 				}
 			}
 			
@@ -1281,14 +1427,15 @@ define(function() {
 			    params = pair[2];
 			    fn_callback = pair[3];
 			    
-			    
 			}
 			
 			var i = c;
 			c++;
+			//throw 'stop';
 			
 			var cb = function(err, res2) {
-				//console.log('cb');
+			    num_currently_executing--;
+				//console.log('cb num_currently_executing ' + num_currently_executing + ', c ' + c);
 				if (err) {
 					var stack = new Error().stack;
 					console.log(stack);
@@ -1302,15 +1449,31 @@ define(function() {
 						res[i] = res2;
 					}
 					//console.log('pair.length ' + pair.length);
+					
+					if (fn_callback) {
+					    fn_callback(null, res2);
+					}
+					
+					/*
+					
 					if (pair.length == 3) {
 						fn_callback(null, res2);
 					}
 					if (pair.length == 4) {
 						fn_callback(null, res2);
 					}
+					*/
 					
 					if (c < l) {
-						process();
+					    
+					    // only process if the num executing is less than the max num to execute.
+					    // otherwise the process will be done when a callabck is produced from the function.
+					    
+					    if (num_currently_executing < num_parallel) {
+					        process();
+					    }
+					    
+						
 					} else {
 						callback(null, res);
 					}
@@ -1319,6 +1482,7 @@ define(function() {
 			var arr_to_call = clone(params);
 			
 			arr_to_call.push(cb);
+			console.log('context ' + context);
 			if (context) {
 				fn.apply(context, arr_to_call);
 			} else {
@@ -1326,8 +1490,21 @@ define(function() {
 			}
 		}
 		
-		process();
+		if (arr_functions_params_pairs.length > 0) {
+		    while (arr_functions_params_pairs.length > 0 && num_currently_executing < num_parallel) {
+		        process();
+		    }
+		
+		    //
+		}
+		
+		
 	});
+	
+	var multi = call_multiple_callback_functions;
+	var call_multi = call_multiple_callback_functions;
+	
+	
 	
 	var native_constructor_tof = function(value) {
 		if (value === String) {
@@ -1388,6 +1565,7 @@ define(function() {
 		'input_processors': input_processors,
 		'output_processors': output_processors,
 		'call_multiple_callback_functions': call_multiple_callback_functions,
+		'call_multi': call_multi,
 		'native_constructor_tof': native_constructor_tof
 		//,
 		//'output_processors': output_processors
