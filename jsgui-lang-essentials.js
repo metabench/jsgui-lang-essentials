@@ -1,12 +1,19 @@
 
 if (typeof define !== 'function') {
     var define = require('amdefine')(module);
+    var Stream = require('stream');
+    
 }
+
+// needs to use node.js's stream for the moment.
+// Will make a new jsgui-node-lang-essentials version because it's got node-specific & dependant code now.
+
+//define(['Stream'], 
+//function (Stream) {
+
 
 define(function() {
 	
-	
-
 	// Do setup work here
 	// alert('loading jsgui-lang');
 	// lots of things will be in var declarations....
@@ -347,6 +354,10 @@ define(function() {
 		return (typeof obj != 'undefined' && obj != null && is_defined(obj._) && is_defined(obj._.type_name));
 	};
 
+
+    // Also a bit of node.js specific code.
+    //  May make node version of jsgui-lang-essentials, jsgui-node-lang-essentials.
+    
 	// may change to the jq_type code.
 	var tof = function(obj) {
 		if (is_defined(obj)) {
@@ -365,13 +376,28 @@ define(function() {
 			return 'undefined';
 		}
 		var res = typeof (obj);
-		if (res == 'object' && is_array(obj))
-			res = 'array';
-		if (res == 'object' && is_ctrl(obj))
-			res = 'control';
+		if (res == 'object') {
+		    if (is_array(obj)) {
+		        res = 'array';
+		    } else if (is_ctrl(obj)) {
+		        res = 'control';
+		    } else {
+		        
+		    }
+			return res;
+		
+		}
+		//console.log('res ' + res);
+		if (res == 'function' || res == 'string' || res == 'number' || res == 'boolean') {
+		    return res;
+		}
 		if (obj instanceof RegExp) res = 'regex';
+		if (obj instanceof Buffer) res = 'buffer';
+		if (obj instanceof Stream) res = 'stream';
 		return res;
 	};
+	
+	// Bug for a test case - checking if a function is an instanceOf stream.
 	
 	var atof = function(arr) {
 		var res = [];
@@ -649,6 +675,10 @@ define(function() {
 			res = 'c';
 		} else if (t == 'regex') {
 			res = 'r';
+		} else if (t == 'buffer') { // may remove for non node.js.
+			res = 'B';
+		} else if (t == 'stream') { // may remove for non node.js.
+			res = 'S';
 		} else if (t == 'number') {
 			// is it an integer?
 			// is it a decimal?
@@ -789,6 +819,7 @@ define(function() {
 				arr = arr_trim_undefined(arr);
 				var sig = get_item_sig(arr, 1);
 				arr.l = arr.length;
+				//console.log('arr.l ' + arr.l);
 				return fn.call(that, arr, sig, _super);
 			} else if (a.length == 0) {
 				arr = [];
@@ -803,12 +834,23 @@ define(function() {
         // but when the function has it's last parameter as a function...
         //  can we assume it is a callback?
         
+        // when given a whole bunch of strings (or numbers) these can be used to make a map for the results.
+        //  ie for load_file could give a bunch of string files, it loads them, can provide the results as one object.
+        
+        // may also want to specify if functions get called in parallel, and the limit to how many get called at once.
+        
+        // this could take options in the signature - be able to return a results map.
+        
+        
         
         // this could take options, like 'compile_results'
         //  compile_async_results.
         
         // maybe do that automatically, but have a variable to control it.
         
+        // have options...
+        //  concat_results...
+        //  include params with results?
         
         
     
@@ -825,7 +867,6 @@ define(function() {
 		var res;
 		var process_as_fn = function() {
 		    
-		
 			res = function() {
 				// could use pf here? but maybe not
 
@@ -842,7 +883,7 @@ define(function() {
                     
                     // will do callback result compilation.
                     
-                    
+                    //console.log('ts[param_index] ' + ts[param_index]);
                     
                     if (typeof param_index !== 'undefined' && ts[param_index] == 'array') {
                         // var res = [], a2 = a.slice(1); // don't think this makes
@@ -870,14 +911,35 @@ define(function() {
                         });
                         //return res;
                         
+                        // call_multi not working right?
+                        
                         call_multiple_callback_functions(fns, function(err, res) {
                             if (err) {
                                 throw err;
                             } else {
                                 //
+                                
+                                console.log('res ' + stringify(res));
+                                
+                                // we get back the results of the multiple callback functions.
+                                //  let's put them in one array.
+                                
+                                /* 
+                                var a = [1, 2], b = ["x", "y"], c = [true, false];
+                                var d = a.concat(b, c);
+                                */
+                                
+                                // maybe make result array concat optional.
+                                //  likely to be needed.
+                                
+                                // concat all of the arrays in the results.
+                                
+                                var a = [];
+                                a = a.concat.apply(a, res);
+                                
                                 var callback = last_arg;
                                 //console.log('last_arg ' + last_arg);
-                                callback(null, res);
+                                callback(null, a);
                             }
                         })
                         
@@ -885,10 +947,7 @@ define(function() {
                         return fn.apply(t, a);
                     }
                     
-                    
                 } else {
-                    
-                    
                     
                     if (typeof param_index !== 'undefined' && ts[param_index] == 'array') {
                         // var res = [], a2 = a.slice(1); // don't think this makes
@@ -898,9 +957,6 @@ define(function() {
                         // console.log('fn ' + fn);
                         
                         // but we can make this process a function with a callback.
-                        
-                        
-                        
                         
                         each(a[param_index], function(i, v) {
                             var new_params = a;
@@ -914,20 +970,14 @@ define(function() {
                         return res;
                     } else {
                         return fn.apply(t, a);
-                    }
-                    
+                    }   
                 }
-                
                 
 				// console.log('a.length ' + a.length);
 				// console.log('a ' + stringify(a));
-
 				// console.log('param_index ' + param_index);
 				// console.log('ts ' + stringify(ts));
-                
                 // but if the last function there is a function... it may be best to compile the results into one object.
-                
-                
                 
 			};
 		}
@@ -935,7 +985,7 @@ define(function() {
 		if (sig == '[o]') {
 			var res = [];
 			each(a[0], function(i, v) {
-				res.push([ i, v ]);
+				res.push([i, v]);
 			});
 		} else if (sig == '[f]') {
 			param_index = 0, fn = a[0];
@@ -952,19 +1002,40 @@ define(function() {
 		return res;
 	});
 
-
-	
+    // that target function could take a callback(err, res) parameter.
+    //  that means, when calling the function, if the last function is a callback, we can act differently.
 	var mapify = function(target) {
 		var tt = tof(target);
 		if (tt == 'function') {
 			var res = fp(function(a, sig) {
 				var that = this;
+				console.log('mapify sig ' + sig);
 				if (sig == '[o]') {
 					var map = a[0];
 					each(map, function(i, v) {
 						fn.call(that, i, v);
 					});
+				} else if (sig == '[o,f]') {
+				    var map = a[0];
+				    // call_multi on the function, using the items in the map, calling with 1 param (+callback).
+				    var callback = a[1];
+				    var fns = [];
+				    each(map, function(i, v) {
+				        fns.push([target, [i, v]]);
+				    });
+				    call_multi(fns, function(err_multi, res_multi) {
+				        if (err_multi) {
+				            callback(err_multi);
+				        } else {
+				            callback(null, res_multi);
+				        }
+				    });
+				    
 				} else if (a.length == 2) {
+				    // applying the target function with a callback...
+				    
+				    //var last_arg = a[a.length - 1];
+				    
 					// could take functions, but not dealing with objects may be
 					// tricky?
 					// or just if there are two params its fine.
@@ -1301,24 +1372,23 @@ define(function() {
 	//  Will use some kind of polymorphic rearrangement to rearrange where suitable.
 	
 	var call_multiple_callback_functions = fp(function(a, sig) {
-		
 		// will look at the signature and choose what to do.
-		
 		//if (sig == )
-		
 		// need to be checking if the item is an array - nice to have a different way of doing that with fp.
 		
 		// and want to look out for a number in there.
 		//  want it to call multiple functions, but have them running in parallel too.
 		//  like the async library, but also accepting parameters.
 		
-		
 		// arr_functions_params_pairs, callback
 		var arr_functions_params_pairs, callback, return_params = false;
+		
 		//console.log('a.l ' + a.l);
+		//console.log('');
+		//console.log('');
+		console.log('call_multi sig ' + sig);
 		
 		var num_parallel = 1;
-		
 		
 		if (a.l == 2) {
 			arr_functions_params_pairs = a[0];
@@ -1334,7 +1404,6 @@ define(function() {
 		    //   at least for the first stage... could look in more detail at the array.
 		    //   not using the more complicated signatures right now. could change to a different sig method when needed, or use different sig or fp options.
 		    
-		    
 		    //console.log('sig ' + sig);
 		    
 		    if (sig == '[a,n,f]') {
@@ -1347,7 +1416,6 @@ define(function() {
                 callback = a[1];
                 return_params = a[2];
 		    }
-		    
 			
 		}
 		
@@ -1370,9 +1438,11 @@ define(function() {
 		    num_currently_executing++;
 			// they may not be pairs, they could be a triple with a callback.
 			//console.log('num_currently_executing ' + num_currently_executing);
-			
+			//console.log('c ' + c);
 			
 			var pair = arr_functions_params_pairs[c];
+			
+			//console.log('pair ' + pair);
 			
 			// object (context / caller), function, params
 			// object (context / caller), function, params, fn_callback
@@ -1382,6 +1452,11 @@ define(function() {
 			// function, array
 			// context
 			//console.log('pair.length ' + pair.length);
+			var pair_sig = get_item_sig(pair);
+			console.log('pair_sig ' + pair_sig);
+			//console.log(jsgui.atof(pair));
+			console.log('pair.length ' + pair.length);
+			
 			if (pair.length == 2) {
 				//if (tof(pair[0]) == 'function' && tof(pair[1]) == 'array' && pair.length == 2) {
 				//	fn = pair[0];
@@ -1401,8 +1476,6 @@ define(function() {
 			
 			// function, array, function
 			if (pair.length == 3) {
-			    var pair_sig = get_item_sig(pair);
-			    //console.log('pair_sig ' + pair_sig);
 				if (tof(pair[0]) == 'function' && tof(pair[1]) == 'array' && tof(pair[2]) == 'function') {
 					fn = pair[0];
 					params = pair[1];
@@ -1411,12 +1484,12 @@ define(function() {
 				// object / data_object?
 				// ?, function, array
 				if (tof(pair[1]) == 'function' && tof(pair[2]) == 'array') {
+				    //console.log('has context');
 					context = pair[0];
 					fn = pair[1];
 					params = pair[2];
 					
 					// may not be a fn_callback in this case.
-					
 				}
 			}
 			
@@ -1426,10 +1499,12 @@ define(function() {
 			    fn = pair[1];
 			    params = pair[2];
 			    fn_callback = pair[3];
-			    
 			}
 			
 			var i = c;
+			// not sure it keeps this same value of i.
+			//  can try some tests on this.
+			
 			c++;
 			//throw 'stop';
 			
@@ -1441,8 +1516,10 @@ define(function() {
 					console.log(stack);
 					throw err;
 				} else {
+				    console.log('i ' + i + ', res2 ' + res2);
 					if (return_params) {
-						//console.log('return_params ' + return_params);
+						//console.log('call_multi inner cb return_params ' + stringify(return_params));
+						//throw 'stop';
 						//console.log('params ' + params);
 						res[i] = [params, res2];
 					} else {
@@ -1453,7 +1530,6 @@ define(function() {
 					if (fn_callback) {
 					    fn_callback(null, res2);
 					}
-					
 					/*
 					
 					if (pair.length == 3) {
@@ -1479,10 +1555,12 @@ define(function() {
 					}
 				}
 			}
-			var arr_to_call = clone(params);
 			
+			var arr_to_call = clone(params);
+			//console.log('params ' + params);
+			//console.log('fn ' + fn);
 			arr_to_call.push(cb);
-			console.log('context ' + context);
+			//console.log('context ' + context);
 			if (context) {
 				fn.apply(context, arr_to_call);
 			} else {
@@ -1490,12 +1568,17 @@ define(function() {
 			}
 		}
 		
+		//console.log('arr_functions_params_pairs ' + arr_functions_params_pairs);
 		if (arr_functions_params_pairs.length > 0) {
 		    while (arr_functions_params_pairs.length > 0 && num_currently_executing < num_parallel) {
 		        process();
 		    }
 		
 		    //
+		} else {
+		    if (callback) {
+		        callback(null, null);
+		    }
 		}
 		
 		
@@ -1505,6 +1588,13 @@ define(function() {
 	var call_multi = call_multiple_callback_functions;
 	
 	
+	var Fns = function() {
+	    var fns = [];
+	    fns.go = function(callback) {
+	        call_multi(fns, callback);
+	    }
+	    return fns;
+	}
 	
 	var native_constructor_tof = function(value) {
 		if (value === String) {
@@ -1566,7 +1656,8 @@ define(function() {
 		'output_processors': output_processors,
 		'call_multiple_callback_functions': call_multiple_callback_functions,
 		'call_multi': call_multi,
-		'native_constructor_tof': native_constructor_tof
+		'native_constructor_tof': native_constructor_tof,
+		'Fns': Fns
 		//,
 		//'output_processors': output_processors
 	};
