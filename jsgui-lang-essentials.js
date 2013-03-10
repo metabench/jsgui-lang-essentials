@@ -81,7 +81,6 @@ define(function() {
 	var each = function(collection, fn, context) {
 		// each that puts the results in an array or dict.
 		if (collection) {
-
 			if (collection.__type == 'collection') {
 				return collection.each(fn, context);
 			}

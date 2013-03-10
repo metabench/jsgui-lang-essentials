@@ -29,5 +29,10 @@ Allows programming in JavaScript using Class declarations. Easy access to the me
 		}
 	});
 	
-	
-	
+### Each
+Iterator for both objects and arrays. Iteration callback is in the jQuery style, with the callback providing (index, item) callbacks.
+
+	each(obj_or_array_to_iterate, function(index, item_value) {
+		console.log('index ' + index);
+		console.log('item_value ' + item_value);
+	})
