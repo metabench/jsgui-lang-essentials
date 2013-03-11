@@ -333,8 +333,7 @@ define(function() {
 
 		for ( var c = 0, l = arr_like.length; c < l; c++) {
 			res.push(arr_like[c]);
-		}
-		;
+		};
 
 		return res;
 	};
