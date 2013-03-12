@@ -53,7 +53,7 @@ Creates an array from an array-like object, such as the arguments list available
 Tests if an object is a jsgui Control
 
 ### tof
-Returns the type of an object, as a string. Types returned are: null, undefined, object, array, control, function, string, number, boolean, regex, buffer, stream.
+Returns the type of an object, as a string. Types returned are: null, undefined, object, array, control, function, string, number, boolean, regex, buffer, readable_stream, writable_stream.
 
 ### atof
 Returns an array containing the types of all the items in array. This uses tof.
