@@ -81,6 +81,7 @@ define(function() {
 	var each = function(collection, fn, context) {
 		// each that puts the results in an array or dict.
 		if (collection) {
+
 			if (collection.__type == 'collection') {
 				return collection.each(fn, context);
 			}
@@ -333,7 +334,8 @@ define(function() {
 
 		for ( var c = 0, l = arr_like.length; c < l; c++) {
 			res.push(arr_like[c]);
-		};
+		}
+		;
 
 		return res;
 	};
@@ -381,17 +383,33 @@ define(function() {
 		        res = 'control';
 		    } else {
 		        
+		        if (obj instanceof RegExp) res = 'regex';
+				if (obj instanceof Buffer) res = 'buffer';
+
+				if (obj instanceof Stream.Readable) res = 'readable_stream';
+				if (obj instanceof Stream.Writable) res = 'writable_stream';
+
+
 		    }
 			return res;
-		
 		}
 		//console.log('res ' + res);
 		if (res == 'function' || res == 'string' || res == 'number' || res == 'boolean') {
 		    return res;
 		}
-		if (obj instanceof RegExp) res = 'regex';
-		if (obj instanceof Buffer) res = 'buffer';
-		if (obj instanceof Stream) res = 'stream';
+		//if (obj instanceof RegExp) res = 'regex';
+		//if (obj instanceof Buffer) res = 'buffer';
+
+		//if (obj instanceof Stream.Readable) res = 'readable_stream';
+		//if (obj instanceof Stream.Writable) res = 'writable_stream';
+
+
+		//if (obj instanceof Stream) res = 'stream';
+		
+                    //console.log('readable ' + (stream instanceof Stream.Readable));
+                    //console.log('writable ' + (stream instanceof Stream.Writable));
+
+
 		return res;
 	};
 	
@@ -675,8 +693,15 @@ define(function() {
 			res = 'r';
 		} else if (t == 'buffer') { // may remove for non node.js.
 			res = 'B';
-		} else if (t == 'stream') { // may remove for non node.js.
-			res = 'S';
+		//} else if (t == 'stream') { // may remove for non node.js.
+		//	res = 'S';
+
+		// Will also incorporate dubplex and transformation streams.
+
+		} else if (t == 'readable_stream') { // may remove for non node.js.
+			res = 'R';
+		} else if (t == 'writable_stream') { // may remove for non node.js.
+			res = 'W';
 		} else if (t == 'number') {
 			// is it an integer?
 			// is it a decimal?

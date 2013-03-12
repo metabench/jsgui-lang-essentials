@@ -1,6 +1,6 @@
 {
   "name": "jsgui-lang-essentials",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "main": "jsgui-lang-essentials.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -24,5 +24,8 @@
       "email": "james@metabench.com"
     } 
   ],
+  "engines": {
+    "node": ">=0.10.0"
+  },
   "license": "MIT"
 }
