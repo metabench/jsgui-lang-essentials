@@ -1,9 +1,28 @@
 
+/* Changelog:
+	
+	0.4.2
+	-----
+
+	Performance improvements, based on profiling
+	isArray uses Array.isArray if available
+
+
+*/
+
+
 if (typeof define !== 'function') {
     var define = require('amdefine')(module);
-    var Stream = require('stream');
+    
     
 }
+if (typeof window === 'undefined') {
+    //exports.foo = {};
+    var Stream = require('stream');
+} else {
+    //window.foo = {};
+}
+
 
 // needs to use node.js's stream for the moment.
 // Will make a new jsgui-node-lang-essentials version because it's got node-specific & dependant code now.
@@ -13,7 +32,10 @@ if (typeof define !== 'function') {
 
 
 define(function() {
-	
+		
+
+
+	//console.log('running jsgui-lang-essentials');
 	// Do setup work here
 	// alert('loading jsgui-lang');
 	// lots of things will be in var declarations....
@@ -26,7 +48,7 @@ define(function() {
 	};
 	
 	// not so sure of the utility of namespcExtension, propsToMerge
-	Class.extend = function(prop, namespcExtension, propsToMerge) {
+	Class.extend = function(prop) {
 		var _super = this.prototype;
 		initializing = true;
 		var prototype = new this();
@@ -55,8 +77,12 @@ define(function() {
 		function Class() {
 			//console.log('initializing ' + initializing);
 			//console.log('!!this.init ' + !!this.init);
-			if (!initializing && this.init)
+			if (!initializing && this.init) {
 				this.init.apply(this, arguments);
+				//if (this.post_init) {
+				//	this.post_init();
+				//}
+			}
 		};
 		Class.prototype = prototype;
 		Class.prototype.constructor = Class;
@@ -65,14 +91,7 @@ define(function() {
 		//Class._superclass = _super;
 		
 		Class._superclass = this;
-		/*
-		 * if (namespcExtension) { each(namespcExtension, function(i, n) {
-		 * Class[i] = n; }); }; if (propsToMerge) { each(propsToMerge,
-		 * function(i, n) { if (typeof Class.prototype[i] === 'undefined') {
-		 * Class.prototype[i] = n; } else { $.extend(true, Class.prototype[i],
-		 * n); }; }); }
-		 */
-
+		
 		return Class;
 	};
 
@@ -95,15 +114,16 @@ define(function() {
 			}
 			
 			if (is_array(collection)) {
-				var res = [];
-				for ( var c = 0, l = collection.length; c < l; c++) {
-					var res_item;
+				var res = [], res_item;
+				for (var c = 0, l = collection.length; c < l; c++) {
+					res_item;
 					if (ctu == false) break;
 					
 					if (context) {
-						res_item = fn(c, collection[c]);
-					} else {
 						res_item = fn.call(context, c, collection[c], stop);
+						
+					} else {
+						res_item = fn(c, collection[c], stop);
 					}
 					res.push(res_item);
 				}
@@ -129,7 +149,9 @@ define(function() {
 				|| "object";
 	};
 
-	var is_array = Array.is_array || function(obj) {
+
+
+	var is_array = Array.isArray || function(obj) {
 		return jq_type(obj) === "array";
 	}, is_dom_node = function isDomNode(o) {
 		return (typeof o.nodeType != 'undefined' && typeof o.childNodes != 'undefined');
@@ -314,17 +336,32 @@ define(function() {
 	// check, like is_defined.
 	var get_map_from_arr = function(arr) {
 		var res = {};
-		each(arr, function(i, v) {
-			res[v] = i;
-		});
+		for (var c = 0, l = arr.length; c < l; c++) {
+			res[arr[c]] = c;
+		}
+		//each(arr, function(i, v) {
+		//	res[v] = i;
+		//});
 		return res;
 	}
+
+	//var arrSliceCall = Array.prototype.slice.call;
 
 	var arr_like_to_arr = function(arr_like) {
 		// like an arguments list
 		// is this working in Safari?
 
-		var res = [];
+		//var res = [];
+		//return arrSliceCall(arr_like, 0);
+
+
+		//return Array.prototype.slice(arr_like);
+		
+
+
+
+		var res = new Array(arr_like.length);
+
 
 		// This was not working in Safari! Worked in Chrome. Probably
 		// (mis?)recognised it as an object.
@@ -332,12 +369,13 @@ define(function() {
 		// res.push(v);
 		// });
 
-		for ( var c = 0, l = arr_like.length; c < l; c++) {
-			res.push(arr_like[c]);
-		}
-		;
+		for (var c = 0, l = arr_like.length; c < l; c++) {
+			//res.push(arr_like[c]);
+			res[c] = arr_like[c];
+		};
 
 		return res;
+		
 	};
 
 	/*
@@ -345,13 +383,19 @@ define(function() {
 	 * null && typeof obj.$render != 'undefined'); };
 	 */
 
+	// Could do better... could check actual instanceof
+	//  But a more advanced jsgui level could do this check, and have its own tof function.
+	//  That would be jsgui-lang-html has the check for is control.
+
+
+
 	var is_ctrl = function(obj) {
 
 		// if (obj._) {
 		// console.log('obj._.type_name ' + obj._.type_name);
 		// }
 
-		return (typeof obj != 'undefined' && obj != null && is_defined(obj._) && is_defined(obj._.type_name));
+		return (typeof obj != 'undefined' && obj != null && is_defined(obj._) && is_defined(obj.__type_name));
 	};
 
 
@@ -359,44 +403,80 @@ define(function() {
     //  May make node version of jsgui-lang-essentials, jsgui-node-lang-essentials.
     
 	// may change to the jq_type code.
-	var tof = function(obj) {
-		if (is_defined(obj)) {
-			
-			if (obj === null) {
-				return 'null';
-			}
-			
-			//console.log('typeof obj ' + typeof obj);
-			//console.log('obj === null ' + (obj === null));
-			
-			if (is_defined(obj.__type)) {
-				return obj.__type;
-			}
-		} else {
-			return 'undefined';
-		}
-		var res = typeof (obj);
-		if (res == 'object') {
-		    if (is_array(obj)) {
-		        res = 'array';
-		    } else if (is_ctrl(obj)) {
-		        res = 'control';
-		    } else {
-		        
-		        if (obj instanceof RegExp) res = 'regex';
-				if (obj instanceof Buffer) res = 'buffer';
+	var tof = function(obj, t1) {
+		var res = t1 || typeof obj;
 
-				if (obj instanceof Stream.Readable) res = 'readable_stream';
-				if (obj instanceof Stream.Writable) res = 'writable_stream';
-
-
-		    }
-			return res;
-		}
-		//console.log('res ' + res);
-		if (res == 'function' || res == 'string' || res == 'number' || res == 'boolean') {
+		if (res == 'number' || res == 'string' || res == 'function' || res == 'boolean') {
 		    return res;
 		}
+
+
+		if (res == 'object') {
+
+			if (typeof obj != 'undefined') {
+				
+				if (obj === null) {
+					return 'null';
+				}
+
+
+				
+				//console.log('typeof obj ' + typeof obj);
+				//console.log('obj === null ' + (obj === null));
+				
+				if (obj.__type) {
+					return obj.__type;
+				} else {
+
+					// Inline array test, earlier on?
+
+					if (is_array(obj)) {
+				        //res = 'array';
+				        //return res;
+				        return 'array';
+				    } else if (is_ctrl(obj)) {
+				    	//throw 'control stop';
+				    	//if (is_defined(obj.__type)) {
+						//	return obj.__type;
+						//}
+
+				        //res = 'control';
+				        //return res;
+				        return 'control';
+				    } else {
+				        
+				        if (obj instanceof RegExp) res = 'regex';
+
+				        // For running inside Node.
+				        //console.log('twin ' + typeof window);
+				        if (typeof window === 'undefined') {
+				        	//console.log('obj.length ' + obj.length);
+				        	if (obj instanceof Buffer) res = 'buffer';
+
+							if (obj instanceof Stream.Readable) res = 'readable_stream';
+							if (obj instanceof Stream.Writable) res = 'writable_stream';
+				        }
+				        
+
+				    }
+				    //console.log('res ' + res);
+					return res;
+					
+				}
+
+
+			} else {
+				return 'undefined';
+			}
+
+
+		    
+		}
+
+		
+		
+		//console.log('res ' + res);
+		
 		//if (obj instanceof RegExp) res = 'regex';
 		//if (obj instanceof Buffer) res = 'buffer';
 
@@ -416,7 +496,7 @@ define(function() {
 	// Bug for a test case - checking if a function is an instanceOf stream.
 	
 	var atof = function(arr) {
-		var res = [];
+		var res = new Array(arr.length);
 		each(arr, function(i, v) {
 			res.push(tof(v));
 		});
@@ -507,9 +587,10 @@ define(function() {
 					res.push(']');
 				} else if (obj == null) {
 					res = [ 'null' ];
-				} else if (is_ctrl(obj)) {
+					// don't do this is_control test.
+				//} else if (is_ctrl(obj)) {
 					// res = res + '{"ctrl": "' + obj.id() + '"}';
-					res.push('{"ctrl": "' + obj.id() + '"}');
+				//	res.push('{"ctrl": "' + obj.id() + '"}');
 				} else {
 					// console.log('obj ' + obj);
 
@@ -601,10 +682,10 @@ define(function() {
 		} else if (t == 'function') {
 
 			if (includeFunctions !== false) {
-				res = [ obj.toString() ];
+				res = [obj.toString()];
 			}
 		} else {
-			res = [ obj.toString() ];
+			res = [obj.toString()];
 		}
 		return res.join('');
 	};
@@ -624,7 +705,7 @@ define(function() {
 		// or even i2 = [i, i]? maybe not for the moment, plenty of
 		// simplification already, could maybe express things like that at some
 		// stage.
-
+		
 		// rearrangement - '[i, i], s' <- 's, [i, i]'
 		// if second arrangement, output the items in the order given.
 		// that seems to require parsing these signature strings.
@@ -636,141 +717,162 @@ define(function() {
 		// is it an array?
     
         
-		
-		
-		var t = tof(i), res;
-		
-		if (i === 0) {
+		var res;
+		var t1 = typeof i;
+
+		// could possibly have two functions - one that will be very fast, and a more dynamic, slower one.
+
+
+
+		if (t1 == 'string') {
+			res = 's';
+		} else if (t1 == 'number') {
+			res = 'n';
+		} else if (t1 == 'boolean') {
+			res = 'b';
+		} else if (t1 == 'function') {
+			res = 'f';
+		} else {
+			var t = tof(i, t1);
+			
+			//if (i === 0) {
+				//console.log('i ' + i);
+				//console.log('t ' + t);
+			//}
+				
+
+
 			//console.log('i ' + i);
 			//console.log('t ' + t);
-		}
-		
-		//console.log('i ' + i);
-		//console.log('t ' + t);
-		
-		// likely to use a map for this logic instead.
-		// console.log('t ' + t);
-		if (t == 'array') {
-		    
-		    // look into it with one nested level...
-		    if (arr_depth) {
-		        var res = '[';
-                for ( var c = 0, l = i.length; c < l; c++) {
-                    if (c > 0)
-                        res = res + ',';
-                    res = res + get_item_sig(i[c], arr_depth - 1);
-                }
-                res = res + ']';
-		        
-		    } else {
-		        res = 'a';
-		    }
-		    
-		    
-		    /*
 			
-			*/
-			
-			
-			// return res;
-		} else if (t == 'string') {
-			// is it a string that parses to an integer?
-			// parses to a decimal number
-			// parses to an rgb value
-			// parses to hex value
-			// various string regexs used (optionally), can say what we are
-			// looking for (for various parameters).
-			// may want a quick basic poly.
-
-			res = 's';
-		} else if (t == 'boolean') {
-			res = 'b';
-		} else if (t == 'function') {
-			res = 'f';
-		} else if (t == 'control') {
-			res = 'c';
-		} else if (t == 'regex') {
-			res = 'r';
-		} else if (t == 'buffer') { // may remove for non node.js.
-			res = 'B';
-		//} else if (t == 'stream') { // may remove for non node.js.
-		//	res = 'S';
-
-		// Will also incorporate dubplex and transformation streams.
-
-		} else if (t == 'readable_stream') { // may remove for non node.js.
-			res = 'R';
-		} else if (t == 'writable_stream') { // may remove for non node.js.
-			res = 'W';
-		} else if (t == 'number') {
-			// is it an integer?
-			// is it a decimal?
-
-			// are we checking for those anyway? maybe not by default.
-
-			res = 'n';
-		} else if (t == 'object') {
-
-			// not sure about showing all the details of the object.
-
-			res = 'o';
-		} else if (t == 'undefined') {
-			res = 'u';
-		} else {
-			
-			if (t == 'collection_index') {
-				return 'X';
-			} else if (t == 'data_object') {
-				if (i._abstract) {
-					return '~D';
-				} else {
-					res = 'D';
-				}
-			
+			// likely to use a map for this logic instead.
+			// console.log('t ' + t);
+			if (t == 'array') {
+			    
+			    // look into it with one nested level...
+			    if (arr_depth) {
+			        //res = String.fromCharCode(91);
+			        res = '['
+	                for (var c = 0, l = i.length; c < l; c++) {
+	                    if (c > 0) res = res + ',';
+	                    res = res + get_item_sig(i[c], arr_depth - 1);
+	                }
+	                //res = res + String.fromCharCode(93);;
+	                res = res + ']';
+			    } else {
+			        res = 'a';
+			    }
+			    //console.log('res* ' + res);
+			    
+			    /*
 				
+				*/
+				
+				
+				// return res;
+			//} else if (t == 'string') {
+				// is it a string that parses to an integer?
+				// parses to a decimal number
+				// parses to an rgb value
+				// parses to hex value
+				// various string regexs used (optionally), can say what we are
+				// looking for (for various parameters).
+				// may want a quick basic poly.
+
+			//	res = 's';
+			//} else if (t == 'boolean') {
+			//	res = 'b';
+			//} else if (t == 'function') {
+			//	res = 'f';
+			} else if (t == 'control') {
+				res = 'c';
+			} else if (t == 'regex') {
+				res = 'r';
+			} else if (t == 'buffer') { // may remove for non node.js.
+				res = 'B';
+			//} else if (t == 'stream') { // may remove for non node.js.
+			//	res = 'S';
+
+			// Will also incorporate dubplex and transformation streams.
+
+			} else if (t == 'readable_stream') { // may remove for non node.js.
+				res = 'R';
+			} else if (t == 'writable_stream') { // may remove for non node.js.
+				res = 'W';
+			//} else if (t == 'number') {
+				// is it an integer?
+				// is it a decimal?
+
+				// are we checking for those anyway? maybe not by default.
+
+			//	res = 'n';
+			} else if (t == 'object') {
+
+				// not sure about showing all the details of the object.
+
+				res = 'o';
+			} else if (t == 'undefined') {
+				res = 'u';
 			} else {
-				if (t == 'data_value') {
-					if (i._abstract) {
-						return '~V';
-					} else {
-						return 'V';
-					}
 				
-					
-				} else if (t == 'collection') {
+				if (t == 'collection_index') {
+					return 'X';
+				} else if (t == 'data_object') {
 					if (i._abstract) {
-						return '~C'
+						res = '~D';
 					} else {
-						return 'C';
+						res = 'D';
 					}
-				
 				
 					
 				} else {
-					console.log('t ' + t);
-					throw 'Unexpected object type ' + t;
+					if (t == 'data_value') {
+						if (i._abstract) {
+							res = '~V';
+						} else {
+							res = 'V';
+						}
+					
+						
+					} else if (t == 'collection') {
+						if (i._abstract) {
+							res = '~C'
+						} else {
+							res = 'C';
+						}
+					
+					
+						
+					} else {
+						console.log('t ' + t);
+						throw 'Unexpected object type ' + t;
+					}
 				}
+				
+				// May have decimal type as well?
+				
+				// d for the moment?
+				//  May want decimal numbers too?
+				//  D is better for Data_Object.
+				
+				// c for Control
+				// C for Collection
+				
+				
+				
+				// Could say Data_Object is D
+				// Collection is C?
+				
+				
+				
 			}
 			
-			// May have decimal type as well?
-			
-			// d for the moment?
-			//  May want decimal numbers too?
-			//  D is better for Data_Object.
-			
-			// c for Control
-			// C for Collection
-			
-			
-			
-			// Could say Data_Object is D
-			// Collection is C?
-			
-			
 			
 		}
-		// console.log('sig res ' + res);
+		//console.log('get_item_sig res ' + res);
 		return res;
+		
+		
 	};
 
 	
@@ -788,7 +890,25 @@ define(function() {
 	var arr_trim_undefined = function(arr_like) {
 		var res = [];
 		var last_defined = -1;
+		var t, v;
+		for (var c = 0, l = arr_like.length; c < l; c++) {
+			v = arr_like[c];
+			t = tof(v);
+			if (t == 'undefined') {
 
+			} else {
+				last_defined = c;
+			}
+		}
+
+		for (var c = 0, l = arr_like.length; c < l; c++) {
+			if (c <= last_defined) {
+				res.push(arr_like[c]);
+			}
+		}
+
+
+		/*
 		each(arr_like, function(i, v) {
 
 			var t = tof(v);
@@ -805,6 +925,7 @@ define(function() {
 				res.push(v);
 			}
 		});
+		*/
 		return res;
 	};
 	
@@ -817,40 +938,98 @@ define(function() {
 		
 		//is there a this?
 		
-		var that = this;
+		//var that = this;
 		//var _super = that._super;
 		
 		// not having access to this here
-		
+		var arr_slice = Array.prototype.slice;
+		var arr, sig, a2, l, a;
+
+		/*
 		var new_fn = function() {
 			
-			var that = this;
-			var _super = that._super;
+			that = this;
+
+			// not sure we want super here?
+			//  We hardly ever use this, it would slow things down.
+			//var _super = that._super;
 			
-			var a = arguments;
+			a = arguments;
 			// and if there is an array of arguments given... give as one
 			// argument.
-			if (a.length == 1) {
-				var sig = get_item_sig([a[0]], 1);
+			l = a.length;
+
+			if (l == 1) {
+				sig = get_item_sig([a[0]], 1);
 				//console.log('fp sig, a.l == 1 ' + sig);
 				// a 'l' property given to array given
-				var a2 = [ a[0] ];
-				a2.l = a2.length;
-				return fn.call(that, a2, sig, _super);
-			} else if (a.length > 1) {
-				var arr = arr_like_to_arr(a);
-				arr = arr_trim_undefined(arr);
-				var sig = get_item_sig(arr, 1);
-				arr.l = arr.length;
+				a2 = [a[0]];
+				a2.l = 1;
+				//return fn.call(that, a2, sig, _super);
+				return fn.call(that, a2, sig);
+			} else if (l > 1) {
+				//var arr = arr_like_to_arr(a);
+				//var arr = arr_slice.call(a, 0);
+				//
+				arr = arr_trim_undefined(arr_slice.call(a, 0));
+
+				//arr = arr_trim_undefined(arr);
+				//var sig = get_item_sig(arr, 1);
+				sig = get_item_sig(arr, 1);
+				arr.l = l;
 				//console.log('arr.l ' + arr.l);
-				return fn.call(that, arr, sig, _super);
+				//return fn.call(that, arr, sig, _super);
+				return fn.call(that, arr, sig);
 			} else if (a.length == 0) {
-				arr = [];
+				arr = new Array(0);
 				arr.l = 0;
-				return fn.call(that, arr, '[]', _super);
+				//return fn.call(that, arr, '[]', _super);
+				return fn.call(that, arr, '[]');
 			}
 		};
 		return new_fn;
+		*/
+		return function() {
+			
+			//that = this;
+
+			// not sure we want super here?
+			//  We hardly ever use this, it would slow things down.
+			//var _super = that._super;
+			
+			a = arguments;
+			// and if there is an array of arguments given... give as one
+			// argument.
+			l = a.length;
+
+			if (l == 1) {
+				sig = get_item_sig([a[0]], 1);
+				//console.log('fp sig, a.l == 1 ' + sig);
+				// a 'l' property given to array given
+				a2 = [a[0]];
+				a2.l = 1;
+				//return fn.call(that, a2, sig, _super);
+				return fn.call(this, a2, sig);
+			} else if (l > 1) {
+				//var arr = arr_like_to_arr(a);
+				//var arr = arr_slice.call(a, 0);
+				//
+				arr = arr_trim_undefined(arr_slice.call(a, 0));
+
+				//arr = arr_trim_undefined(arr);
+				//var sig = get_item_sig(arr, 1);
+				sig = get_item_sig(arr, 1);
+				arr.l = l;
+				//console.log('arr.l ' + arr.l);
+				//return fn.call(that, arr, sig, _super);
+				return fn.call(this, arr, sig);
+			} else if (a.length == 0) {
+				arr = new Array(0);
+				arr.l = 0;
+				//return fn.call(that, arr, '[]', _super);
+				return fn.call(this, arr, '[]');
+			}
+		}
 	}, fp = functional_polymorphism;
 
 	var arrayify = fp(function(a, sig) {
@@ -889,14 +1068,15 @@ define(function() {
 		// (param_index, fn)
 		var res;
 		var process_as_fn = function() {
-		    
+		    //console.log('process_as_fn');
 			res = function() {
 				// could use pf here? but maybe not
 
-				// console.log('arguments.length ' + arguments.length);
-
+				//console.log('arguments.length ' + arguments.length);
+				//console.log('arguments ' + stringify(arguments));
 				var a = arr_like_to_arr(arguments), ts = atof(a), t = this;
-                
+                //console.log('a ' + stringify(a));
+
                 var last_arg = a[a.length - 1];
                 //console.log('last_arg ' + last_arg);
                 //console.log('a.length ' + a.length);
@@ -942,7 +1122,7 @@ define(function() {
                             } else {
                                 //
                                 
-                                console.log('res ' + stringify(res));
+                                //console.log('res ' + stringify(res));
                                 
                                 // we get back the results of the multiple callback functions.
                                 //  let's put them in one array.
@@ -1032,7 +1212,7 @@ define(function() {
 		if (tt == 'function') {
 			var res = fp(function(a, sig) {
 				var that = this;
-				console.log('mapify sig ' + sig);
+				console.log('mapified fn sig ' + sig);
 				if (sig == '[o]') {
 					var map = a[0];
 					each(map, function(i, v) {
@@ -1054,7 +1234,7 @@ define(function() {
 				        }
 				    });
 				    
-				} else if (a.length == 2) {
+				} else if (a.length >= 2) {
 				    // applying the target function with a callback...
 				    
 				    //var last_arg = a[a.length - 1];
@@ -1240,10 +1420,10 @@ define(function() {
 		var arr = prop_name.split('.');
 		//console.log('arr ' + arr);
 		var c = 0, l = arr.length;
-		var i = obj._ || obj;
+		var i = obj._ || obj, s;
 		
 		while (c < l) {
-			var s = arr[c];
+			s = arr[c];
 			//console.log('s ' + s);
 			if (typeof i[s] == 'undefined') {
 				if (c - l == -1) {
@@ -1263,46 +1443,165 @@ define(function() {
 		};
 		return prop_value;
 	};
+	
+	/*
+	var ll_get_inner = function(a0, a1) {
+		var i = a0._ || a0;
+		var arr = a1.split('.');
 
+		// shows how much the ll functions get used when they get logged!
+
+		//console.log('ll_get arr ' + arr);
+		var c = 0, l = arr.length, s;
+
+		while (c < l) {
+			s = arr[c];
+			//console.log('s ' + s);
+			//console.log('typeof i[s] ' + typeof i[s]);
+			//console.log('c ' + c);
+			//console.log('l ' + l);
+			if (typeof i[s] == 'undefined') {
+				if (c - l == -1) {
+					// console.log('default_value ' + default_value);
+					// console.log(i[s]);
+					//i[s] = a[2];
+					//return i[s];
+				} else {
+					// i[s] = {};
+					throw 'object ' + s + ' not found';
+				}
+			} else {
+				if (c - l == -1) {
+					// console.log('default_value ' + default_value);
+					// console.log(i[s]);
+					// i[s] = a[2];
+					return i[s];
+				}
+			}
+			i = i[s];
+			c++;
+		}
+	}
+	*/
+	
+
+	var ll_get = function(a0, a1) {
+
+		if (a0 && a1) {
+			var i = a0._ || a0;
+
+			if (a1 == '.') {
+				//(function() {
+					if (typeof i['.'] == 'undefined') {
+						//throw 'object ' + s + ' not found';
+						return undefined;
+					} else {
+						return i['.'];
+					}
+				//})();
+				
+			} else {
+
+				//return ll_get_inner(a0, a1);
+
+				
+				var arr = a1.split('.');
+
+				// shows how much the ll functions get used when they get logged!
+
+				//console.log('ll_get arr ' + arr);
+				var c = 0, l = arr.length, s;
+
+				while (c < l) {
+					s = arr[c];
+					//console.log('s ' + s);
+					//console.log('typeof i[s] ' + typeof i[s]);
+					//console.log('c ' + c);
+					//console.log('l ' + l);
+					if (typeof i[s] == 'undefined') {
+						if (c - l == -1) {
+							// console.log('default_value ' + default_value);
+							// console.log(i[s]);
+							//i[s] = a[2];
+							//return i[s];
+						} else {
+							// i[s] = {};
+							throw 'object ' + s + ' not found';
+						}
+					} else {
+						if (c - l == -1) {
+							// console.log('default_value ' + default_value);
+							// console.log(i[s]);
+							// i[s] = a[2];
+							return i[s];
+						}
+					}
+					i = i[s];
+					c++;
+				}
+				
+				
+				
+			}
+			// return i;
+		}
+	};
+
+
+	/*
 	var ll_get = fp(function(a, sig) {
 
 		if (a.l == 2) {
-			var arr = a[1].split('.');
-
-			// shows how much the ll functions get used when they get logged!
-
-			// console.log('get arr ' + arr);
-			var c = 0, l = arr.length;
 			var i = a[0]._ || a[0];
 
-			while (c < l) {
-				var s = arr[c];
-				// console.log('s ' + s);
-				if (typeof i[s] == 'undefined') {
-					if (c - l == -1) {
-						// console.log('default_value ' + default_value);
-						// console.log(i[s]);
-						// i[s] = a[2];
-						// return i[s];
-					} else {
-						// i[s] = {};
-						throw 'object ' + s + ' not found';
-					}
+			if (a[1] == '.') {
+				if (typeof i['.'] == 'undefined') {
+					//throw 'object ' + s + ' not found';
+					return undefined;
 				} else {
-					if (c - l == -1) {
-						// console.log('default_value ' + default_value);
-						// console.log(i[s]);
-						// i[s] = a[2];
-						return i[s];
-					}
+					return i['.'];
 				}
-				i = i[s];
-				c++;
+			} else {
+				var arr = a[1].split('.');
+
+				// shows how much the ll functions get used when they get logged!
+
+				//console.log('ll_get arr ' + arr);
+				var c = 0, l = arr.length;
+				
+
+				while (c < l) {
+					var s = arr[c];
+					//console.log('s ' + s);
+					//console.log('typeof i[s] ' + typeof i[s]);
+					//console.log('c ' + c);
+					//console.log('l ' + l);
+					if (typeof i[s] == 'undefined') {
+						if (c - l == -1) {
+							// console.log('default_value ' + default_value);
+							// console.log(i[s]);
+							//i[s] = a[2];
+							//return i[s];
+						} else {
+							// i[s] = {};
+							throw 'object ' + s + ' not found';
+						}
+					} else {
+						if (c - l == -1) {
+							// console.log('default_value ' + default_value);
+							// console.log(i[s]);
+							// i[s] = a[2];
+							return i[s];
+						}
+					}
+					i = i[s];
+					c++;
+				}
 			}
-			;
 			// return i;
 		}
 	});
+	*/
 	
 	var truth = function(value) {
 		return value === true;
@@ -1339,13 +1638,13 @@ define(function() {
 	
 
 	var is_arr_of_t = function(obj, type_name) {
-		var t = tof(obj);
+		var t = tof(obj), tv;
 		if (t == 'array') {
 			var res = true;
 			
 			each(obj, function(i, v) {
 				//console.log('2) v ' + stringify(v));
-				var tv = tof(v);
+				tv = tof(v);
 				//console.log('tv ' + tv);
 				//console.log('type_name ' + type_name);
 				if (tv != type_name) res = false;
@@ -1409,7 +1708,7 @@ define(function() {
 		//console.log('a.l ' + a.l);
 		//console.log('');
 		//console.log('');
-		console.log('call_multi sig ' + sig);
+		//console.log('call_multi sig ' + sig);
 		
 		var num_parallel = 1;
 		
@@ -1476,9 +1775,9 @@ define(function() {
 			// context
 			//console.log('pair.length ' + pair.length);
 			var pair_sig = get_item_sig(pair);
-			console.log('pair_sig ' + pair_sig);
+			//console.log('pair_sig ' + pair_sig);
 			//console.log(jsgui.atof(pair));
-			console.log('pair.length ' + pair.length);
+			//console.log('pair.length ' + pair.length);
 			
 			if (pair.length == 2) {
 				//if (tof(pair[0]) == 'function' && tof(pair[1]) == 'array' && pair.length == 2) {
@@ -1539,7 +1838,7 @@ define(function() {
 					console.log(stack);
 					throw err;
 				} else {
-				    console.log('i ' + i + ', res2 ' + res2);
+				    //console.log('i ' + i + ', res2 ' + res2);
 					if (return_params) {
 						//console.log('call_multi inner cb return_params ' + stringify(return_params));
 						//throw 'stop';
@@ -1637,7 +1936,29 @@ define(function() {
 		}
 	}
 	
+	//var storage_closure
 	
+	// jsgui.get and jsgui.set
+	//  so JSGUI itself would have some properties within a closure.
+	//  Not sure if that would allow some kind of global variables (again).
+	var storage_map = {};
+	var get = function(key) {
+		return storage_map[key];
+	}
+
+	var set = function(key, value) {
+		storage_map[key] = value;
+	}
+
+
+	/*
+
+	(function() {
+
+
+	})();
+	
+	*/
 	// will put functions into the jsgui object.
 
 	// with the functions listed like this it will be easier to document them.
@@ -1680,7 +2001,9 @@ define(function() {
 		'call_multiple_callback_functions': call_multiple_callback_functions,
 		'call_multi': call_multi,
 		'native_constructor_tof': native_constructor_tof,
-		'Fns': Fns
+		'Fns': Fns,
+		'get': get,
+		'set': set
 		//,
 		//'output_processors': output_processors
 	};
