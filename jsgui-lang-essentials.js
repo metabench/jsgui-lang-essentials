@@ -1,6 +1,10 @@
 
 /* Changelog:
 	
+	0.4.3
+	-----
+	Added comment about changing arr_like_to_arr
+
 	0.4.2
 	-----
 
@@ -356,7 +360,7 @@ define(function() {
 
 
 		//return Array.prototype.slice(arr_like);
-		
+		// May have better way of doing this.
 
 
 
